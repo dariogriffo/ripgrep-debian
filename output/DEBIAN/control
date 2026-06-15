@@ -1,0 +1,10 @@
+Source: ripgrep
+Section: utils
+Priority: optional
+Maintainer: Dario Griffo <dariogriffo@gmail.com>
+Homepage: https://github.com/dariogriffo/ripgrep-debian
+Package: ripgrep
+Version: RIPGREP_VERSION-BUILD_VERSION+DIST
+Architecture: amd64
+Depends: 
+Description: ripgrep recursively searches directories for a regex pattern while respecting your gitignore

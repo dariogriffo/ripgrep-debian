@@ -1,0 +1,43 @@
+#!/usr/bin/make -f
+DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
+RIPGREP_VERSION := $(shell dpkg-parsechangelog -S Version | sed 's/[-~].*//')
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+
+override_dh_auto_build:
+	@arch="$(DEB_HOST_ARCH)"; \
+	case "$$arch" in \
+		amd64)   RG_RELEASE="ripgrep-x86_64-unknown-linux-musl" ;; \
+		arm64)   RG_RELEASE="ripgrep-aarch64-unknown-linux-musl" ;; \
+		armel)   RG_RELEASE="ripgrep-arm-unknown-linux-musleabihf" ;; \
+		armhf)   RG_RELEASE="ripgrep-armv7-unknown-linux-musleabihf" ;; \
+		ppc64el) RG_RELEASE="ripgrep-powerpc64le-unknown-linux-gnu" ;; \
+		s390x)   RG_RELEASE="ripgrep-s390x-unknown-linux-gnu" ;; \
+		riscv64) RG_RELEASE="ripgrep-riscv64gc-unknown-linux-gnu" ;; \
+		i386)    RG_RELEASE="ripgrep-i686-unknown-linux-musl" ;; \
+		*) echo "Unsupported architecture: $$arch"; exit 1 ;; \
+	esac; \
+	echo "Downloading $$RG_RELEASE for $(RIPGREP_VERSION)..."; \
+	wget -q "https://github.com/astral-sh/ripgrep/releases/download/$(RIPGREP_VERSION)/$$RG_RELEASE.tar.gz"; \
+	tar -xf "$$RG_RELEASE.tar.gz"; \
+	rm -f "$$RG_RELEASE.tar.gz"; \
+	echo "$$RG_RELEASE" > .rg_release_name
+
+override_dh_auto_install:
+	@RG_RELEASE=$$(cat .rg_release_name); \
+	install -D -m 755 "$$RG_RELEASE/rg" debian/ripgrep/usr/bin/rg
+
+override_dh_auto_test:
+
+override_dh_auto_clean:
+	@if [ -f .rg_release_name ]; then \
+		RG_RELEASE=$$(cat .rg_release_name); \
+		rm -rf "$$RG_RELEASE" .rg_release_name || true; \
+	fi
+
+override_dh_strip:
+
+override_dh_shlibdeps:

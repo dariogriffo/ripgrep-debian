@@ -1,0 +1,86 @@
+name: Build ripgrep for Debian
+
+on:
+  workflow_dispatch:
+    inputs:
+      ripgrep_version:
+        description: The version of ripgrep to build.
+        type: string
+        required: true
+      build_version:
+        description: The build version.
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-ripgrep:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ripgrep-debian
+        uses: actions/checkout@v4
+
+      - name: Build ripgrep
+        run: ./build.sh ${{ inputs.ripgrep_version }} ${{ inputs.build_version }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact
+          path: ripgrep_*.deb
+
+  build-src:
+    name: Build Source Packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ripgrep-debian
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dpkg-dev devscripts wget ca-certificates
+
+      - name: Build source packages
+        run: ./build_src.sh ${{ inputs.ripgrep_version }} ${{ inputs.build_version }}
+
+      - name: Upload Source Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-artifact
+          path: |
+            ripgrep_*.dsc
+            ripgrep_*.orig.tar.gz
+            ripgrep_*.debian.tar.xz
+
+  release-ripgrep:
+    name: (Draft-)Release ripgrep for Debian
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs:
+      - build-ripgrep
+      - build-src
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifact
+
+      - name: Download Source Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: source-artifact
+
+      - name: Publish Release Draft
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            ripgrep_*.deb
+            ripgrep_*.dsc
+            ripgrep_*.orig.tar.gz
+            ripgrep_*.debian.tar.xz
+          name: ${{ inputs.ripgrep_version }}+${{ inputs.build_version }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          fail_on_unmatched_files: true
