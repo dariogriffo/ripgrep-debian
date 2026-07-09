@@ -55,7 +55,7 @@ jobs:
             ripgrep_*.debian.tar.xz
 
   release-ripgrep:
-    name: (Draft-)Release ripgrep for Debian
+    name: Release ripgrep for Debian
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs:
@@ -72,15 +72,15 @@ jobs:
         with:
           name: source-artifact
 
-      - name: Publish Release Draft
+      - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
+          draft: false
           files: |
             ripgrep_*.deb
             ripgrep_*.dsc
             ripgrep_*.orig.tar.gz
             ripgrep_*.debian.tar.xz
           name: ${{ inputs.ripgrep_version }}+${{ inputs.build_version }}
-          tag_name: ${{ env.RELEASE_TAG }}
+          tag_name: ${{ inputs.ripgrep_version }}+${{ inputs.build_version }}
           fail_on_unmatched_files: true
