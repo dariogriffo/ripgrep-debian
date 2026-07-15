@@ -23,6 +23,11 @@ jobs:
       - name: Checkout ripgrep-debian
         uses: actions/checkout@v4
 
+      - name: Validate upstream license permits paid distribution
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./validate_license.sh ${{ inputs.ripgrep_version }}
+
       - name: Build ripgrep
         run: ./build.sh ${{ inputs.ripgrep_version }} ${{ inputs.build_version }}
 
