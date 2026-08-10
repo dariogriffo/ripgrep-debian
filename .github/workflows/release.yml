@@ -11,13 +11,22 @@ on:
         description: The build version.
         type: string
         required: true
+      architecture:
+        description: Architecture to build (amd64, arm64, armhf, or 'all' for all architectures)
+        type: choice
+        default: 'all'
+        options:
+          - 'all'
+          - 'amd64'
+          - 'arm64'
+          - 'armhf'
 
 permissions:
   contents: write
 
 jobs:
   build-ripgrep:
-    name: Build
+    name: Build Binary Packages
     runs-on: ubuntu-latest
     steps:
       - name: Checkout ripgrep-debian
@@ -29,12 +38,12 @@ jobs:
         run: ./validate_license.sh ${{ inputs.ripgrep_version }}
 
       - name: Build ripgrep
-        run: ./build.sh ${{ inputs.ripgrep_version }} ${{ inputs.build_version }}
+        run: ./build_debian.sh ${{ inputs.ripgrep_version }} ${{ inputs.build_version }} ${{ inputs.architecture }} && ./build_ubuntu.sh ${{ inputs.ripgrep_version }} ${{ inputs.build_version }} ${{ inputs.architecture }}
 
-      - name: Upload Artifact
+      - name: Upload Binary Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: artifact
+          name: binary-artifact
           path: ripgrep_*.deb
 
   build-src:
@@ -67,10 +76,10 @@ jobs:
       - build-ripgrep
       - build-src
     steps:
-      - name: Download All Artifacts
+      - name: Download Binary Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: artifact
+          name: binary-artifact
 
       - name: Download Source Artifacts
         uses: actions/download-artifact@v4

@@ -1,10 +1,22 @@
-Source: ripgrep
 Section: utils
 Priority: optional
 Maintainer: Dario Griffo <dariogriffo@gmail.com>
-Homepage: https://github.com/dariogriffo/ripgrep-debian
+Homepage: https://github.com/BurntSushi/ripgrep
 Package: ripgrep
-Version: RIPGREP_VERSION-BUILD_VERSION+DIST
-Architecture: amd64
-Depends: 
-Description: ripgrep recursively searches directories for a regex pattern while respecting your gitignore
+Version: ripgrep_VERSION-BUILD_VERSION~DIST
+Architecture: SUPPORTED_ARCHITECTURES
+Description: recursively searches directories for a regex pattern
+ ripgrep is a line-oriented search tool that recursively searches the current
+ directory for a regex pattern while respecting your gitignore rules and
+ automatically skipping hidden files/directories and binary files (smart
+ filtering). ripgrep is similar to other popular search tools like The Silver
+ Searcher, ack and grep.
+ .
+ ripgrep is generally faster than both The Silver Searcher and GNU grep. It
+ defaults to recursive directory search and won't search files ignored by your
+ `.gitignore` files. Use ripgrep if you like speed, filtering by default, fewer
+ bugs, and Unicode support.
+ .
+ This package repackages the statically linked musl binary published upstream.
+ PCRE2 is compiled in, so unlike the Debian archive build it needs no shared
+ libraries at runtime.

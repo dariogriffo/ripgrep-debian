@@ -10,33 +10,33 @@ override_dh_auto_configure:
 override_dh_auto_build:
 	@arch="$(DEB_HOST_ARCH)"; \
 	case "$$arch" in \
-		amd64)   RG_RELEASE="ripgrep-x86_64-unknown-linux-musl" ;; \
-		arm64)   RG_RELEASE="ripgrep-aarch64-unknown-linux-musl" ;; \
-		armel)   RG_RELEASE="ripgrep-arm-unknown-linux-musleabihf" ;; \
-		armhf)   RG_RELEASE="ripgrep-armv7-unknown-linux-musleabihf" ;; \
-		ppc64el) RG_RELEASE="ripgrep-powerpc64le-unknown-linux-gnu" ;; \
-		s390x)   RG_RELEASE="ripgrep-s390x-unknown-linux-gnu" ;; \
-		riscv64) RG_RELEASE="ripgrep-riscv64gc-unknown-linux-gnu" ;; \
-		i386)    RG_RELEASE="ripgrep-i686-unknown-linux-musl" ;; \
+		amd64) TARGET="x86_64-unknown-linux-musl" ;; \
+		arm64) TARGET="aarch64-unknown-linux-musl" ;; \
+		armhf) TARGET="armv7-unknown-linux-musleabihf" ;; \
 		*) echo "Unsupported architecture: $$arch"; exit 1 ;; \
 	esac; \
-	echo "Downloading $$RG_RELEASE for $(RIPGREP_VERSION)..."; \
-	wget -q "https://github.com/astral-sh/ripgrep/releases/download/$(RIPGREP_VERSION)/$$RG_RELEASE.tar.gz"; \
-	tar -xf "$$RG_RELEASE.tar.gz"; \
-	rm -f "$$RG_RELEASE.tar.gz"; \
-	echo "$$RG_RELEASE" > .rg_release_name
+	REL="ripgrep-$(RIPGREP_VERSION)-$$TARGET"; \
+	echo "Downloading $$REL..."; \
+	wget -q "https://github.com/BurntSushi/ripgrep/releases/download/$(RIPGREP_VERSION)/$$REL.tar.gz"; \
+	rm -rf ripgrep-dist; \
+	mkdir -p ripgrep-dist; \
+	tar -xf "$$REL.tar.gz" -C ripgrep-dist --strip-components=1; \
+	rm -f "$$REL.tar.gz"
 
 override_dh_auto_install:
-	@RG_RELEASE=$$(cat .rg_release_name); \
-	install -D -m 755 "$$RG_RELEASE/rg" debian/ripgrep/usr/bin/rg
+	install -D -m 755 ripgrep-dist/rg debian/ripgrep/usr/bin/rg
+	install -D -m 644 ripgrep-dist/doc/rg.1 debian/ripgrep/usr/share/man/man1/rg.1
+	install -D -m 644 ripgrep-dist/complete/rg.bash debian/ripgrep/usr/share/bash-completion/completions/rg
+	install -D -m 644 ripgrep-dist/complete/rg.fish debian/ripgrep/usr/share/fish/vendor_completions.d/rg.fish
+	install -D -m 644 ripgrep-dist/complete/_rg debian/ripgrep/usr/share/zsh/vendor-completions/_rg
+
+override_dh_installchangelogs:
+	dh_installchangelogs ripgrep-dist/doc/CHANGELOG.md
 
 override_dh_auto_test:
 
 override_dh_auto_clean:
-	@if [ -f .rg_release_name ]; then \
-		RG_RELEASE=$$(cat .rg_release_name); \
-		rm -rf "$$RG_RELEASE" .rg_release_name || true; \
-	fi
+	rm -rf ripgrep-dist || true
 
 override_dh_strip:
 

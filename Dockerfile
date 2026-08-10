@@ -6,25 +6,67 @@ ARG ripgrep_VERSION
 ARG BUILD_VERSION
 ARG FULL_VERSION
 ARG ARCH
-ARG UV_RELEASE
+ARG RG_RELEASE
+ARG BUILD_DATE
 
-RUN mkdir -p /output/usr/bin
-RUN mkdir -p /output/usr/share/doc/ripgrep
-RUN mkdir -p /output/DEBIAN
+RUN mkdir -p /output/usr/bin \
+             /output/usr/share/doc/ripgrep \
+             /output/usr/share/man/man1 \
+             /output/usr/share/bash-completion/completions \
+             /output/usr/share/fish/vendor_completions.d \
+             /output/usr/share/zsh/vendor-completions \
+             /output/DEBIAN
 
-COPY ${UV_RELEASE}/* /output/usr/bin/
-COPY output/DEBIAN/control /output/DEBIAN/
+# Binary
+COPY ${RG_RELEASE}/rg /output/usr/bin/rg
+RUN chmod 755 /output/usr/bin/rg
+
+# Man page (gzip -n for reproducible output)
+COPY ${RG_RELEASE}/doc/rg.1 /tmp/rg.1
+RUN gzip -9 -n -c /tmp/rg.1 > /output/usr/share/man/man1/rg.1.gz \
+ && chmod 644 /output/usr/share/man/man1/rg.1.gz \
+ && rm -f /tmp/rg.1
+
+# Shell completions
+COPY ${RG_RELEASE}/complete/rg.bash /output/usr/share/bash-completion/completions/rg
+COPY ${RG_RELEASE}/complete/rg.fish /output/usr/share/fish/vendor_completions.d/rg.fish
+COPY ${RG_RELEASE}/complete/_rg      /output/usr/share/zsh/vendor-completions/_rg
+RUN chmod 644 /output/usr/share/bash-completion/completions/rg \
+              /output/usr/share/fish/vendor_completions.d/rg.fish \
+              /output/usr/share/zsh/vendor-completions/_rg
+
+# Docs: copyright plus the upstream README/FAQ/GUIDE shipped in the tarball
+COPY output/copyright /output/usr/share/doc/ripgrep/copyright
+COPY ${RG_RELEASE}/README.md /output/usr/share/doc/ripgrep/README.md
+COPY ${RG_RELEASE}/doc/FAQ.md /output/usr/share/doc/ripgrep/FAQ.md
+COPY ${RG_RELEASE}/doc/GUIDE.md /output/usr/share/doc/ripgrep/GUIDE.md
+RUN chmod 644 /output/usr/share/doc/ripgrep/copyright \
+              /output/usr/share/doc/ripgrep/README.md \
+              /output/usr/share/doc/ripgrep/FAQ.md \
+              /output/usr/share/doc/ripgrep/GUIDE.md
+
+# Upstream changelog
+COPY ${RG_RELEASE}/doc/CHANGELOG.md /tmp/changelog.upstream
+RUN gzip -9 -n -c /tmp/changelog.upstream > /output/usr/share/doc/ripgrep/changelog.gz \
+ && chmod 644 /output/usr/share/doc/ripgrep/changelog.gz \
+ && rm -f /tmp/changelog.upstream
+
+# Debian changelog (substitute placeholders, then gzip)
+COPY output/changelog.Debian /tmp/changelog.Debian
+RUN sed -i "s/FULL_VERSION/$FULL_VERSION/" /tmp/changelog.Debian \
+ && sed -i "s/DIST/$DEBIAN_DIST/" /tmp/changelog.Debian \
+ && sed -i "s|DATE|$BUILD_DATE|" /tmp/changelog.Debian \
+ && gzip -9 -n -c /tmp/changelog.Debian > /output/usr/share/doc/ripgrep/changelog.Debian.gz \
+ && chmod 644 /output/usr/share/doc/ripgrep/changelog.Debian.gz \
+ && rm -f /tmp/changelog.Debian
+
+# Control + maintainer scripts
+COPY output/DEBIAN/control /output/DEBIAN/control
 COPY output/DEBIAN/postinst /output/DEBIAN/postinst
 RUN chmod 755 /output/DEBIAN/postinst
-COPY output/copyright /output/usr/share/doc/ripgrep/
-COPY output/changelog.Debian /output/usr/share/doc/ripgrep/
-COPY output/README.md /output/usr/share/doc/ripgrep/
-
-RUN sed -i "s/DIST/$DEBIAN_DIST/" /output/usr/share/doc/ripgrep/changelog.Debian
-RUN sed -i "s/FULL_VERSION/$FULL_VERSION/" /output/usr/share/doc/ripgrep/changelog.Debian
-RUN sed -i "s/DIST/$DEBIAN_DIST/" /output/DEBIAN/control
-RUN sed -i "s/ripgrep_VERSION/$ripgrep_VERSION/" /output/DEBIAN/control
-RUN sed -i "s/BUILD_VERSION/$BUILD_VERSION/" /output/DEBIAN/control
-RUN sed -i "s/SUPPORTED_ARCHITECTURES/$ARCH/" /output/DEBIAN/control
+RUN sed -i "s/ripgrep_VERSION/$ripgrep_VERSION/" /output/DEBIAN/control \
+ && sed -i "s/BUILD_VERSION/$BUILD_VERSION/" /output/DEBIAN/control \
+ && sed -i "s/DIST/$DEBIAN_DIST/" /output/DEBIAN/control \
+ && sed -i "s/SUPPORTED_ARCHITECTURES/$ARCH/" /output/DEBIAN/control
 
 RUN dpkg-deb --build /output /ripgrep_${FULL_VERSION}.deb

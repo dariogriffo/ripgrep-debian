@@ -6,7 +6,7 @@ BUILD_VERSION=$2
 
 if [ -z "$ripgrep_VERSION" ] || [ -z "$BUILD_VERSION" ]; then
     echo "Usage: $0 <ripgrep_version> <build_version>"
-    echo "Example: $0 14.1.1 1"
+    echo "Example: $0 15.2.0 1"
     exit 1
 fi
 
@@ -19,7 +19,7 @@ echo "Creating Debian/Ubuntu source packages for ripgrep ${ripgrep_VERSION}-${BU
 # Download upstream source tarball (shared .orig.tar.gz across all distributions)
 if [ ! -f "$ORIG_TARBALL" ]; then
     echo "Downloading upstream source from GitHub..."
-    wget -q "https://github.com/astral-sh/ripgrep/archive/refs/tags/${ripgrep_VERSION}.tar.gz" -O "$ORIG_TARBALL"
+    wget -q "https://github.com/BurntSushi/ripgrep/archive/refs/tags/${ripgrep_VERSION}.tar.gz" -O "$ORIG_TARBALL"
     echo "  Downloaded $ORIG_TARBALL"
 else
     echo "  Using existing $ORIG_TARBALL"
@@ -64,7 +64,7 @@ done
 
 echo ""
 echo "Building Ubuntu source packages..."
-UBUNTU_DISTS=("jammy" "noble" "questing")
+UBUNTU_DISTS=("jammy" "noble" "questing" "resolute")
 for dist in "${UBUNTU_DISTS[@]}"; do
     build_source_package "$dist"
 done

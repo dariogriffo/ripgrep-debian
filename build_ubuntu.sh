@@ -4,81 +4,69 @@ ARCH=${3:-amd64}  # Default to amd64 if no architecture specified
 
 if [ -z "$ripgrep_VERSION" ] || [ -z "$BUILD_VERSION" ]; then
     echo "Usage: $0 <ripgrep_version> <build_version> [architecture]"
-    echo "Example: $0 0.8.11 1 arm64"
-    echo "Example: $0 0.8.11 1 all    # Build for all architectures"
-    echo "Supported architectures: amd64, arm64, armhf, ppc64el, s390x, riscv64, all"
+    echo "Example: $0 15.2.0 1 arm64"
+    echo "Example: $0 15.2.0 1 all    # Build for all architectures"
+    echo "Supported architectures: amd64, arm64, armhf, all"
     exit 1
 fi
 
-# Function to map Ubuntu architecture to ripgrep release name
-get_ripgrep_release() {
+BUILD_DATE="$(date -R)"
+
+# Function to map Ubuntu architecture to the ripgrep release target triple.
+# Only targets upstream actually publishes are listed; every one of them is a
+# statically linked musl build, so the packages have no library dependencies.
+get_ripgrep_target() {
     local arch=$1
     case "$arch" in
-        "amd64")
-            echo "ripgrep-x86_64-unknown-linux-musl"
-            ;;
-        "arm64")
-            echo "ripgrep-aarch64-unknown-linux-musl"
-            ;;
-        "armhf")
-            echo "ripgrep-armv7-unknown-linux-musleabihf"
-            ;;
-        "ppc64el")
-            echo "ripgrep-powerpc64le-unknown-linux-gnu"
-            ;;
-        "s390x")
-            echo "ripgrep-s390x-unknown-linux-gnu"
-            ;;
-        "riscv64")
-            echo "ripgrep-riscv64gc-unknown-linux-gnu"
-            ;;
-        *)
-            echo ""
-            ;;
+        "amd64") echo "x86_64-unknown-linux-musl" ;;
+        "arm64") echo "aarch64-unknown-linux-musl" ;;
+        "armhf") echo "armv7-unknown-linux-musleabihf" ;;
+        *)       echo "" ;;
     esac
 }
 
 # Function to build for a specific architecture
 build_architecture() {
     local build_arch=$1
+    local target
     local ripgrep_release
 
-    ripgrep_release=$(get_ripgrep_release "$build_arch")
-    if [ -z "$ripgrep_release" ]; then
+    target=$(get_ripgrep_target "$build_arch")
+    if [ -z "$target" ]; then
         echo "❌ Unsupported architecture: $build_arch"
-        echo "Supported architectures: amd64, arm64, armhf, ppc64el, s390x, riscv64"
+        echo "Supported architectures: amd64, arm64, armhf"
         return 1
     fi
 
-    echo "Building for architecture: $build_arch using $ripgrep_release"
+    ripgrep_release="ripgrep-$build_arch"
+    local asset="ripgrep-${ripgrep_VERSION}-${target}"
 
-    # Clean up any previous builds for this architecture
+    echo "Building for architecture: $build_arch using $asset"
+
+    # Clean up any previous downloads for this architecture
     rm -rf "$ripgrep_release" || true
-    rm -f "${ripgrep_release}.tar.gz" || true
+    rm -f "${asset}.tar.gz" || true
 
-    # Download and extract ripgrep binary for this architecture
-    if ! wget "https://github.com/astral-sh/ripgrep/releases/download/${ripgrep_VERSION}/${ripgrep_release}.tar.gz"; then
+    # Download and extract the ripgrep bundle for this architecture. The tarball
+    # has a top-level <asset>/ directory, so strip it into a per-arch folder.
+    if ! wget "https://github.com/BurntSushi/ripgrep/releases/download/${ripgrep_VERSION}/${asset}.tar.gz"; then
         echo "❌ Failed to download ripgrep binary for $build_arch"
         return 1
     fi
 
-    if ! tar -xf "${ripgrep_release}.tar.gz"; then
+    mkdir -p "$ripgrep_release"
+    if ! tar -xf "${asset}.tar.gz" -C "$ripgrep_release" --strip-components=1; then
         echo "❌ Failed to extract ripgrep binary for $build_arch"
         return 1
     fi
 
-    rm -f "${ripgrep_release}.tar.gz"
+    rm -f "${asset}.tar.gz"
 
-    # Build packages for appropriate Ubuntu distributions
-    # riscv64 is only supported from noble (24.04) onwards
-    if [ "$build_arch" = "riscv64" ]; then
-        declare -a arr=("noble")
-    else
-        declare -a arr=("jammy" "noble" "questing")
-    fi
+    # amd64/arm64/armhf are release architectures on every supported Ubuntu.
+    declare -a arr=("jammy" "noble" "questing" "resolute")
 
     for dist in "${arr[@]}"; do
-        FULL_VERSION="$ripgrep_VERSION-${BUILD_VERSION}+${dist}_${build_arch}_ubu"
+        FULL_VERSION="$ripgrep_VERSION-${BUILD_VERSION}~${dist}_${build_arch}_ubu"
         echo "  Building $FULL_VERSION"
 
         if ! docker build . -f Dockerfile.ubu -t "ripgrep-ubuntu-$dist-$build_arch" \
@@ -87,7 +75,8 @@ build_architecture() {
             --build-arg BUILD_VERSION="$BUILD_VERSION" \
             --build-arg FULL_VERSION="$FULL_VERSION" \
             --build-arg ARCH="$build_arch" \
-            --build-arg UV_RELEASE="$ripgrep_release"; then
+            --build-arg RG_RELEASE="$ripgrep_release" \
+            --build-arg BUILD_DATE="$BUILD_DATE"; then
             echo "❌ Failed to build Docker image for $dist on $build_arch"
             return 1
         fi
@@ -116,8 +105,8 @@ if [ "$ARCH" = "all" ]; then
     echo "🚀 Building ripgrep $ripgrep_VERSION-$BUILD_VERSION for all supported architectures..."
     echo ""
 
-    # All supported architectures (Ubuntu dropped armel and i386 support)
-    ARCHITECTURES=("amd64" "arm64" "armhf" "ppc64el" "s390x" "riscv64")
+    # All supported architectures
+    ARCHITECTURES=("amd64" "arm64" "armhf")
 
     for build_arch in "${ARCHITECTURES[@]}"; do
         echo "==========================================="

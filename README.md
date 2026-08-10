@@ -1,17 +1,17 @@
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/dariogriffo/ripgrep-debian/total)
 ![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/dariogriffo/ripgrep-debian/latest/total)
 ![GitHub Release](https://img.shields.io/github/v/release/dariogriffo/ripgrep-debian)
-![GitHub Release Date](https://img.shields.io/github/release-date/dariogriffo/ripgrep-debian)
+![GitHub Release Date](https://img.shields.io/github/release-date/dariogriffo/ripgrep-debian?display_date=published_at)
 
 <h1>
    <p align="center">
-     <a href="https://ripgrep.org/"><img src="https://github.com/dariogriffo/ripgrep-debian/blob/main/ripgrep-logo.png" alt="ripgrep Logo" width="128" style="margin-right: 20px"></a>
+     <a href="https://github.com/BurntSushi/ripgrep"><img src="https://github.com/dariogriffo/ripgrep-debian/blob/main/ripgrep-logo.png" alt="ripgrep Logo" width="128" style="margin-right: 20px"></a>
      <a href="https://www.debian.org/"><img src="https://github.com/dariogriffo/ripgrep-debian/blob/main/debian-logo.png" alt="Debian Logo" width="104" style="margin-left: 20px"></a>
      <br>ripgrep for Debian
    </p>
 </h1>
 <p align="center">
- ripgrep is a general-purpose command-line fuzzy finder.
+ Recursively search directories for a regex pattern, respecting your gitignore.
 </p>
 
 # ripgrep for Debian
@@ -23,14 +23,32 @@ This repository contains build scripts to produce the _unofficial_ Debian packag
 ⭐⭐⭐ Love using ripgrep on Debian? Show your support by starring this repo or [subscribing](https://buy.stripe.com/aFa28q8hr0lRdlm4a2enS01) — from 1 October 2026, apt access requires a yearly subscription. ⭐⭐⭐
 </p>
 
-Currently supported debian distros are:
-- Bookworm
-- Trixie
-- Sid
+Currently supported Debian distros are:
+- Bookworm (v12)
+- Trixie (v13)
+- Forky (v14)
+- Sid (testing)
+
+Supported architectures:
+- amd64 (x86_64) - All distributions
+- arm64 (aarch64) - All distributions
+- armhf (ARM hard float) - All distributions
+
+These are the Linux targets upstream publishes binaries for. Each is a
+statically linked musl build with PCRE2 compiled in, so the packages have no
+library dependencies — unlike the Debian archive build, which links against
+`libc6`, `libgcc-s1` and `libpcre2-8-0`.
 
 This is an unofficial community project to provide a package that's easy to
 install on Debian. If you're looking for the ripgrep source code, see
 [ripgrep](https://github.com/BurntSushi/ripgrep/).
+
+Each package installs:
+- `/usr/bin/rg`
+- shell completions for bash, fish and zsh
+- the `rg.1` man page
+- upstream and Debian changelogs, the copyright file, and the upstream
+  README, FAQ and GUIDE
 
 ## Install/Update
 
@@ -58,9 +76,24 @@ sudo apt install -y ripgrep
 ```sh
 sudo dpkg -i <filename>.deb
 ```
+
 ## Updating
 
 To update to a new version, just follow any of the installation methods above. There's no need to uninstall the old version; it will be updated correctly.
+
+## Building
+
+### Build for single architecture
+```sh
+./build.sh <ripgrep_version> <build_version> <architecture>
+# Example: ./build.sh 15.2.0 1 arm64
+```
+
+### Build for all architectures
+```sh
+./build.sh <ripgrep_version> <build_version> all
+# Example: ./build.sh 15.2.0 1 all
+```
 
 ## Roadmap
 
